@@ -18,6 +18,20 @@ export function normalizeStudentNumber(studentNumber: string): string {
   return studentNumber.trim().toUpperCase();
 }
 
+/**
+ * Initials from a full name — "Naomi Adjetey" → "NA".
+ *
+ * Lives in this plain module rather than beside the avatar components: those are
+ * client components, and a function exported from a `"use client"` file cannot
+ * be *called* by a Server Component, only rendered.
+ */
+export function initialsFor(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
 /** Collapse runs of whitespace and trim — for names and free-text titles. */
 export function collapseWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
