@@ -1,17 +1,15 @@
+// `dotenv/config` must be first: it populates process.env before `lib/env`
+// validates it. ES import order guarantees that.
 import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set in the .env file");
-}
+import { env } from "./lib/env";
 
 export default defineConfig({
-  schema: "./models/schema.ts", // Your schema file path
-  out: "./drizzle", // Your migrations folder
+  schema: "./db/schema/index.ts",
+  out: "./db/migrations",
   dialect: "postgresql",
-  dbCredentials: {
-    url: DATABASE_URL,
-  },
+  dbCredentials: { url: env.DATABASE_URL },
+  verbose: true,
+  strict: true,
 });
