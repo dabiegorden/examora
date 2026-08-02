@@ -49,6 +49,8 @@ export const UserRepository = {
     password: string;
     role: UserRole;
     status?: UserStatus;
+    /** Set for provisioned accounts issued a generated password. */
+    mustChangePassword?: boolean;
   }): Promise<User> {
     const email = normalizeEmail(input.email);
 
@@ -62,6 +64,7 @@ export const UserRepository = {
       passwordHash: await hashPassword(input.password),
       role: input.role,
       status: input.status ?? "active",
+      mustChangePassword: input.mustChangePassword ?? false,
     };
 
     const [user] = await db.insert(users).values(values).returning();
@@ -88,6 +91,14 @@ export const UserRepository = {
   async updatePassword(userId: string, newPassword: string): Promise<void> {
     const passwordHash = await hashPassword(newPassword);
     await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  },
+
+  /** Raise or clear the forced-password-change flag. */
+  async setMustChangePassword(userId: string, value: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ mustChangePassword: value })
+      .where(eq(users.id, userId));
   },
 
   /** Called on successful sign-in. */

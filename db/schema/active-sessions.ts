@@ -16,6 +16,11 @@ import { users } from "./users";
  * a user may briefly own several. "One active session" is enforced by
  * `SessionRepository.replaceForUser`, which revokes existing rows inside the
  * same transaction as the new sign-in.
+ *
+ * The table stores a **hash** of the session token, never the token itself, so
+ * a leaked database dump cannot be replayed as a set of live logins. Renamed
+ * from `session_token` in the auth phase precisely so the column cannot be
+ * mistaken for something you can compare a cookie against directly.
  */
 export const activeSessions = pgTable(
   "active_sessions",
@@ -24,8 +29,8 @@ export const activeSessions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    /** Opaque random token. Store a hash here once auth lands. */
-    sessionToken: text("session_token").notNull(),
+    /** SHA-256 of the opaque token held by the client. Never the raw token. */
+    tokenHash: text("token_hash").notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -34,7 +39,7 @@ export const activeSessions = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("active_sessions_token_unique_idx").on(table.sessionToken),
+    uniqueIndex("active_sessions_token_unique_idx").on(table.tokenHash),
     index("active_sessions_user_id_idx").on(table.userId),
     index("active_sessions_expires_at_idx").on(table.expiresAt),
   ]

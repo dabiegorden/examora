@@ -141,12 +141,15 @@ async function main(): Promise<void> {
   const studentUsers = await db
     .insert(users)
     .values(
-      seedStudents.map((student) => ({
+      seedStudents.map((student, index) => ({
         fullName: student.fullName,
         email: student.email,
         passwordHash,
         role: USER_ROLE.STUDENT,
         status: "active" as const,
+        // The last student is left on a "temporary" password so the forced
+        // first-login change is reachable by hand without provisioning someone.
+        mustChangePassword: index === seedStudents.length - 1,
       }))
     )
     .returning();
@@ -221,7 +224,10 @@ async function main(): Promise<void> {
 
   console.log(`Sign in as any seeded account with password: ${SEED_PASSWORD}`);
   console.log(`  Teacher: ${seedTeacher.email}`);
-  console.log(`  Student: ${seedStudents[0].email}\n`);
+  console.log(`  Student: ${seedStudents[0].email}`);
+  console.log(
+    `  Student (forced password change): ${seedStudents[seedStudents.length - 1].email}\n`
+  );
 }
 
 main()

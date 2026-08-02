@@ -5,6 +5,12 @@ import { activeSessions } from "@/db/schema";
 import { SESSION_TTL_MS } from "@/constants/app";
 import type { ActiveSession } from "@/types/db";
 
+/**
+ * Session rows.
+ *
+ * Every method takes a **token hash**, never a raw token — hashing happens in
+ * `lib/auth/session.ts`, which is the only place that ever sees the raw value.
+ */
 export const SessionRepository = {
   /**
    * Sign a user in on this device, ending every other session they hold.
@@ -15,23 +21,21 @@ export const SessionRepository = {
    */
   async replaceForUser(input: {
     userId: string;
-    sessionToken: string;
+    tokenHash: string;
     ipAddress?: string | null;
     userAgent?: string | null;
-    ttlMs?: number;
+    expiresAt: Date;
   }): Promise<ActiveSession> {
-    const expiresAt = new Date(Date.now() + (input.ttlMs ?? SESSION_TTL_MS));
-
     const [, inserted] = await db.batch([
       db.delete(activeSessions).where(eq(activeSessions.userId, input.userId)),
       db
         .insert(activeSessions)
         .values({
           userId: input.userId,
-          sessionToken: input.sessionToken,
+          tokenHash: input.tokenHash,
           ipAddress: input.ipAddress ?? null,
           userAgent: input.userAgent ?? null,
-          expiresAt,
+          expiresAt: input.expiresAt,
         })
         .returning(),
     ]);
@@ -40,13 +44,13 @@ export const SessionRepository = {
   },
 
   /** Look up a session, treating an expired row as absent. */
-  async findValidByToken(sessionToken: string): Promise<ActiveSession | null> {
+  async findValidByTokenHash(tokenHash: string): Promise<ActiveSession | null> {
     const [session] = await db
       .select()
       .from(activeSessions)
       .where(
         and(
-          eq(activeSessions.sessionToken, sessionToken),
+          eq(activeSessions.tokenHash, tokenHash),
           gt(activeSessions.expiresAt, new Date())
         )
       )
@@ -56,24 +60,23 @@ export const SessionRepository = {
   },
 
   async listForUser(userId: string): Promise<ActiveSession[]> {
-    return db
-      .select()
-      .from(activeSessions)
-      .where(eq(activeSessions.userId, userId));
+    return db.select().from(activeSessions).where(eq(activeSessions.userId, userId));
   },
 
   /** Extend a session's life on activity, so an active user is never logged out. */
-  async extend(sessionToken: string, ttlMs = SESSION_TTL_MS): Promise<void> {
+  async extend(tokenHash: string, ttlMs = SESSION_TTL_MS): Promise<Date> {
+    const expiresAt = new Date(Date.now() + ttlMs);
+
     await db
       .update(activeSessions)
-      .set({ expiresAt: new Date(Date.now() + ttlMs) })
-      .where(eq(activeSessions.sessionToken, sessionToken));
+      .set({ expiresAt })
+      .where(eq(activeSessions.tokenHash, tokenHash));
+
+    return expiresAt;
   },
 
-  async revokeByToken(sessionToken: string): Promise<void> {
-    await db
-      .delete(activeSessions)
-      .where(eq(activeSessions.sessionToken, sessionToken));
+  async revokeByTokenHash(tokenHash: string): Promise<void> {
+    await db.delete(activeSessions).where(eq(activeSessions.tokenHash, tokenHash));
   },
 
   async revokeAllForUser(userId: string): Promise<void> {

@@ -78,7 +78,7 @@ export function Navbar() {
             <ThemeToggle className="hidden sm:inline-flex" />
 
             <Link
-              href="/sign-in"
+              href="/login"
               className={cn(
                 buttonVariants({ variant: "ghost" }),
                 "hidden h-9 px-3.5 text-sm md:inline-flex"
@@ -88,7 +88,7 @@ export function Navbar() {
             </Link>
 
             <Link
-              href="/sign-up"
+              href="/login"
               className={cn(
                 buttonVariants(),
                 "hidden h-9 bg-brand px-4 text-sm shadow-sm hover:bg-brand-hover md:inline-flex"
@@ -148,7 +148,7 @@ export function Navbar() {
 
                 <div className="mt-3 flex flex-col gap-2 border-t border-border pt-4">
                   <Link
-                    href="/sign-in"
+                    href="/login"
                     onClick={() => setOpen(false)}
                     className={cn(
                       buttonVariants({ variant: "outline" }),
@@ -158,7 +158,7 @@ export function Navbar() {
                     Sign In
                   </Link>
                   <Link
-                    href="/sign-up"
+                    href="/login"
                     onClick={() => setOpen(false)}
                     className={cn(
                       buttonVariants(),

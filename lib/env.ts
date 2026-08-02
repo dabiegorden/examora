@@ -25,6 +25,13 @@ const envSchema = z.object({
         value.startsWith("postgres://") || value.startsWith("postgresql://"),
       "DATABASE_URL must be a PostgreSQL connection string"
     ),
+  /**
+   * HMAC key for the session cookie signature. 32 bytes minimum so the MAC
+   * cannot be brute-forced offline; rotating it invalidates every session.
+   */
+  AUTH_SECRET: z
+    .string()
+    .min(32, "AUTH_SECRET must be at least 32 characters. Generate one with: node -e \"console.log(require('crypto').randomBytes(48).toString('base64url'))\""),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   /**
    * Echo every SQL statement to the console. Off by default — a bulk insert

@@ -8,6 +8,20 @@
       "when": 1785629624511,
       "tag": "0000_far_warpath",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785631170983,
+      "tag": "0001_auth_add_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785631187245,
+      "tag": "0002_auth_drop_legacy_session_token",
+      "breakpoints": true
     }
   ]
 }

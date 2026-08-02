@@ -8,6 +8,7 @@ import { courseStudents } from "./course-students";
 import { courses } from "./courses";
 import { exams } from "./exams";
 import { options } from "./options";
+import { passwordResetTokens } from "./password-reset-tokens";
 import { questions } from "./questions";
 import { students } from "./students";
 import { users } from "./users";
@@ -27,8 +28,19 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   /** Present only when `role` is `teacher`. */
   taughtCourses: many(courses),
   sessions: many(activeSessions),
+  passwordResetTokens: many(passwordResetTokens),
   auditLogs: many(auditLogs),
 }));
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const studentsRelations = relations(students, ({ one, many }) => ({
   user: one(users, {

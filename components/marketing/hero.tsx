@@ -52,8 +52,10 @@ export function Hero() {
               delay={0.24}
               className="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
             >
+              {/* Examora has no public registration, so every entry point leads
+                  to the single sign-in form for teachers and students alike. */}
               <Link
-                href="/sign-up"
+                href="/login"
                 className={cn(
                   buttonVariants(),
                   "group h-12 w-full bg-brand px-6 text-base shadow-lg shadow-brand/20 transition-all hover:bg-brand-hover hover:shadow-brand/30 sm:w-auto"

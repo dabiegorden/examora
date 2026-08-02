@@ -38,7 +38,7 @@ export function Cta() {
 
             <div className="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
               <Link
-                href="/sign-up"
+                href="/login"
                 className={cn(
                   buttonVariants(),
                   "group h-12 w-full bg-white px-6 text-base font-semibold text-brand shadow-lg hover:bg-white/90 focus-visible:ring-white/50 sm:w-auto"

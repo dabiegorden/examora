@@ -7,6 +7,7 @@ import type {
   courses,
   exams,
   options,
+  passwordResetTokens,
   questions,
   students,
   users,
@@ -48,6 +49,9 @@ export type NewAnswer = typeof answers.$inferInsert;
 
 export type ActiveSession = typeof activeSessions.$inferSelect;
 export type NewActiveSession = typeof activeSessions.$inferInsert;
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;

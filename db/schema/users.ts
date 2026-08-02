@@ -1,4 +1,12 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { userRoleEnum, userStatusEnum } from "./enums";
 
@@ -18,6 +26,12 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
     role: userRoleEnum("role").notNull().default("student"),
     status: userStatusEnum("status").notNull().default("active"),
+    /**
+     * Set when an account is provisioned with a generated password. The signed-in
+     * user is confined to the change-password screen until they clear it, so a
+     * temporary password issued over a side channel can never become permanent.
+     */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

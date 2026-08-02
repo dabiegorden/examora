@@ -18,6 +18,7 @@ export * from "./options";
 export * from "./attempts";
 export * from "./answers";
 export * from "./active-sessions";
+export * from "./password-reset-tokens";
 export * from "./audit-logs";
 
 export * from "./relations";
