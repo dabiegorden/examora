@@ -27,6 +27,14 @@ const SESSION_COOKIE_NAME =
     ? "__Host-examora_session"
     : "examora_session";
 
+/**
+ * Sign-out reasons that mean the database session is gone for good.
+ *
+ * `forbidden` is deliberately absent: that one means "valid session, wrong
+ * place", and clearing the cookie would sign out a perfectly good session.
+ */
+const DEAD_SESSION_REASONS = new Set(["expired", "replaced", "disabled"]);
+
 /** Whether this looks like a browser loading a page, rather than a fetch/XHR. */
 function isDocumentNavigation(request: NextRequest): boolean {
   if (request.method !== "GET") return false;
@@ -58,9 +66,25 @@ export function proxy(request: NextRequest): NextResponse {
     request.cookies.get(SESSION_COOKIE_NAME)?.value
   );
 
-  // Signed-in users have no business on the login form; send them home. Left
-  // alone if they still owe a password change, which the next branch handles.
   if (pathname === "/login" && session) {
+    const reason = request.nextUrl.searchParams.get("reason");
+
+    // The data layer just rejected this session against the database, but the
+    // cookie still verifies and has not reached its own expiry — so proxy would
+    // send the user straight back to a protected route, which would bounce them
+    // here again, forever.
+    //
+    // Proxy is the only place that can fix it: a server component cannot clear
+    // a cookie during render. Dropping it here ends the loop and leaves the
+    // browser clean for the next sign-in.
+    if (reason && DEAD_SESSION_REASONS.has(reason)) {
+      const response = NextResponse.next();
+      response.cookies.delete({ name: SESSION_COOKIE_NAME, path: "/" });
+      return response;
+    }
+
+    // Otherwise the session looks live: signed-in users have no business on the
+    // login form, so send them home.
     return NextResponse.redirect(new URL(homePathForRole(session.role), request.url));
   }
 

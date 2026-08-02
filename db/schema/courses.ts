@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -15,6 +16,10 @@ import { users } from "./users";
  *
  * `code` is unique per teacher rather than globally, so two teachers can both
  * run a course called "PHY101".
+ *
+ * Courses are never hard-deleted: exams, attempts, and results hang off them,
+ * and losing a course would silently take a term of assessment history with it.
+ * `deletedAt` is the tombstone, and every read filters on it.
  */
 export const courses = pgTable(
   "courses",
@@ -29,6 +34,8 @@ export const courses = pgTable(
     /** Free-form label such as "2025/2026". */
     academicYear: text("academic_year"),
     isArchived: boolean("is_archived").notNull().default(false),
+    /** Set when the teacher deletes the course. Non-null means "gone". */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -38,9 +45,15 @@ export const courses = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex("courses_teacher_code_unique_idx").on(table.teacherId, table.code),
+    // Partial, so deleting "PHY101" frees the code for a new course. A plain
+    // unique index would let a tombstone block a title the teacher can no
+    // longer see, which reads as an unexplainable error.
+    uniqueIndex("courses_teacher_code_unique_idx")
+      .on(table.teacherId, table.code)
+      .where(sql`${table.deletedAt} is null`),
     index("courses_teacher_id_idx").on(table.teacherId),
     index("courses_is_archived_idx").on(table.isArchived),
+    index("courses_deleted_at_idx").on(table.deletedAt),
     index("courses_created_at_idx").on(table.createdAt),
   ]
 );

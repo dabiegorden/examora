@@ -30,10 +30,18 @@ import {
   DialogHeader as UIDialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Dialog system.
@@ -490,6 +498,61 @@ export function AppDialog({
         <DialogHeaderBlock title={title} description={description} />
         {children}
         {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * A form shell that is a bottom sheet on phones and a dialog on desktop.
+ *
+ * A centred dialog on a 320px screen leaves no room for a keyboard, and the
+ * fields end up scrolling behind it; a sheet anchored to the bottom keeps the
+ * first field next to the thumb. The two are rendered exclusively rather than
+ * both-with-CSS, because mounting the form twice would give it two copies of
+ * its own state.
+ *
+ * `children` is only mounted while open, so the form resets between openings
+ * without the caller having to clear it.
+ */
+export function ResponsiveFormDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  className,
+}: BaseDialogProps & { children: ReactNode }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className={cn(
+            "max-h-[92svh] gap-0 rounded-t-2xl p-0",
+            // Room for the home indicator on a notched phone.
+            "pb-[env(safe-area-inset-bottom)]",
+            className
+          )}
+        >
+          <SheetHeader className="border-b border-border px-4 py-3.5 pr-12">
+            <SheetTitle>{title}</SheetTitle>
+            {description ? <SheetDescription>{description}</SheetDescription> : null}
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">{children}</div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn("sm:max-w-lg", className)}>
+        <DialogHeaderBlock title={title} description={description} />
+        <div className="max-h-[70svh] overflow-y-auto">{children}</div>
       </DialogContent>
     </Dialog>
   );

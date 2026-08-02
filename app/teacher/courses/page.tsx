@@ -1,176 +1,101 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRightIcon, BookOpenIcon, PlusIcon } from "lucide-react";
+import { BookOpenIcon, ClipboardListIcon, UsersIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ArchivedBadge,
-  DashboardSection,
-  DashboardTable,
-  DataToolbar,
-  EmptyState,
-  PageHeader,
-  PaginationBar,
-  StatCard,
-  type Column,
-  type FilterConfig,
-} from "@/components/dashboard";
-import { courses, formatDaysAgo, type CourseRow } from "@/lib/dashboard/placeholder-data";
+import { MetricCard } from "@/components/app/cards";
+import { PageHeader, Section } from "@/components/app/page";
+import { CoursesView } from "@/components/courses";
+import { requireTeacher } from "@/lib/auth/dal";
+import { CourseRepository } from "@/repositories";
+import { listCoursesSchema } from "@/validators/course";
 
 export const metadata: Metadata = {
   title: "Courses",
   robots: { index: false, follow: false },
 };
 
-const filters: readonly FilterConfig[] = [
-  {
-    id: "year",
-    label: "Filter by academic year",
-    placeholder: "Academic year",
-    options: [
-      { value: "all", label: "All years" },
-      { value: "2025", label: "2025/2026" },
-      { value: "2024", label: "2024/2025" },
-    ],
-  },
-  {
-    id: "status",
-    label: "Filter by status",
-    placeholder: "Status",
-    options: [
-      { value: "all", label: "All courses" },
-      { value: "active", label: "Active" },
-      { value: "archived", label: "Archived" },
-    ],
-  },
-];
+type SearchParams = Record<string, string | string[] | undefined>;
 
-const columns: ReadonlyArray<Column<CourseRow>> = [
-  {
-    id: "course",
-    header: "Course",
-    cell: (course) => (
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-subtle text-brand dark:text-brand-accent">
-          <BookOpenIcon className="size-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="truncate font-medium text-foreground">{course.title}</p>
-            {course.isArchived ? <ArchivedBadge /> : null}
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {course.code} · {course.academicYear}
-          </p>
-        </div>
-      </div>
-    ),
-    className: "min-w-[14rem]",
-  },
-  {
-    id: "students",
-    header: "Students",
-    cell: (course) => <span className="tabular-nums">{course.studentCount}</span>,
-    hideBelow: "sm",
-    align: "end",
-  },
-  {
-    id: "exams",
-    header: "Exams",
-    cell: (course) => <span className="tabular-nums">{course.examCount}</span>,
-    hideBelow: "md",
-    align: "end",
-  },
-  {
-    id: "updated",
-    header: "Updated",
-    cell: (course) => (
-      <span className="text-muted-foreground">{formatDaysAgo(course.updatedDaysAgo)}</span>
-    ),
-    hideBelow: "lg",
-    align: "end",
-  },
-  {
-    id: "open",
-    header: <span className="sr-only">Open</span>,
-    cell: () => (
-      <ArrowRightIcon
-        aria-hidden="true"
-        className="ml-auto size-4 text-muted-foreground"
-      />
-    ),
-    className: "w-10",
-    align: "end",
-  },
-];
+/**
+ * Collapse repeated query parameters.
+ *
+ * `?status=a&status=b` arrives as an array, which every field of the schema
+ * would reject — and one malformed parameter must not throw away the rest of a
+ * shared link. The first value wins.
+ */
+function firstValues(params: SearchParams): Record<string, string> {
+  const entries = Object.entries(params).flatMap(([key, value]) => {
+    const first = Array.isArray(value) ? value[0] : value;
+    return first === undefined ? [] : [[key, first] as const];
+  });
 
-export default function CoursesPage() {
-  const active = courses.filter((course) => !course.isArchived);
-  const totalStudents = active.reduce((sum, course) => sum + course.studentCount, 0);
-  const totalExams = active.reduce((sum, course) => sum + course.examCount, 0);
+  return Object.fromEntries(entries);
+}
+
+export default async function CoursesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  // The layout already established that this is a teacher. It is repeated here
+  // rather than assumed: authorization belongs to the DAL at every entry point,
+  // and a page must not depend on a layout having run to be safe.
+  const teacher = await requireTeacher();
+
+  const raw = firstValues(await searchParams);
+  const parsed = listCoursesSchema.safeParse(raw);
+  // A hand-edited query string degrades to the default view rather than an
+  // error page.
+  const query = parsed.success ? parsed.data : listCoursesSchema.parse({});
+
+  const [page, academicYears, counts, totals] = await Promise.all([
+    CourseRepository.listByTeacher(teacher.id, query),
+    CourseRepository.listAcademicYears(teacher.id),
+    CourseRepository.countByStatus(teacher.id),
+    CourseRepository.totalsForTeacher(teacher.id),
+  ]);
 
   return (
     <>
       <PageHeader
         title="Courses"
         description="Every subject you assess. Courses hold your students, exams, and results."
-        actions={
-          <Link
-            href="/teacher/courses"
-            className={cn(buttonVariants(), "h-9 bg-brand hover:bg-brand-hover")}
-          >
-            <PlusIcon aria-hidden="true" />
-            Create course
-          </Link>
-        }
       />
 
-      <DashboardSection delay={0.05}>
+      <Section delay={0.05}>
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard label="Active courses" value={String(active.length)} hint="Visible to students" />
-          <StatCard label="Enrolled students" value={String(totalStudents)} hint="Across active courses" />
-          <StatCard label="Exams created" value={String(totalExams)} hint="Drafts and published" />
-        </div>
-      </DashboardSection>
-
-      <DashboardSection delay={0.1}>
-        <Card>
-          <CardContent>
-            <DataToolbar
-              searchLabel="Search courses"
-              searchPlaceholder="Search by title or code…"
-              filters={filters}
-            />
-          </CardContent>
-
-          <DashboardTable
-            columns={columns}
-            rows={courses}
-            rowKey={(course) => course.id}
-            caption="All courses"
-            empty={
-              <EmptyState
-                icon={BookOpenIcon}
-                title="No courses yet"
-                description="Create your first course to start adding students and building exams."
-                action={
-                  <Link
-                    href="/teacher/courses"
-                    className={cn(buttonVariants(), "bg-brand hover:bg-brand-hover")}
-                  >
-                    <PlusIcon aria-hidden="true" />
-                    Create course
-                  </Link>
-                }
-              />
+          <MetricCard
+            label="Active courses"
+            value={String(counts.active)}
+            hint={
+              counts.archived > 0
+                ? `${counts.archived} archived`
+                : "Visible to students"
             }
+            icon={BookOpenIcon}
           />
+          <MetricCard
+            label="Enrolled students"
+            value={String(totals.students)}
+            hint="Across active courses"
+            icon={UsersIcon}
+          />
+          <MetricCard
+            label="Exams created"
+            value={String(totals.exams)}
+            hint="Drafts and published"
+            icon={ClipboardListIcon}
+          />
+        </div>
+      </Section>
 
-          <PaginationBar from={1} to={courses.length} total={courses.length} label="courses" />
-        </Card>
-      </DashboardSection>
+      <Section delay={0.1}>
+        <CoursesView
+          page={page}
+          query={query}
+          academicYears={academicYears}
+          counts={counts}
+        />
+      </Section>
     </>
   );
 }

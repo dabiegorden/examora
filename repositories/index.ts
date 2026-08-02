@@ -8,7 +8,11 @@
 
 export { AttemptRepository } from "./attempt.repository";
 export { AuditLogRepository } from "./audit-log.repository";
-export { CourseRepository, type CourseWithCounts } from "./course.repository";
+export {
+  CourseRepository,
+  type CourseStatusCounts,
+  type CourseWithCounts,
+} from "./course.repository";
 export { ExamRepository, type ExamWithStats } from "./exam.repository";
 export { PasswordResetRepository } from "./password-reset.repository";
 export { QuestionRepository } from "./question.repository";

@@ -60,7 +60,12 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        {/*
+          The `Command` root must be here: cmdk keeps its state in a store that
+          `CommandInput`, `CommandList`, and `CommandItem` subscribe to through
+          context. Without it the input throws on mount reading `store.subscribe`.
+        */}
+        <Command>{children}</Command>
       </DialogContent>
     </Dialog>
   )
